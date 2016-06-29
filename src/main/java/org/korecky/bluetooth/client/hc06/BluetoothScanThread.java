@@ -1,5 +1,9 @@
 package org.korecky.bluetooth.client.hc06;
 
+import org.korecky.bluetooth.client.hc06.enums.ServiceUUID;
+import org.korecky.bluetooth.client.hc06.enums.ServiceAttribute;
+import org.korecky.bluetooth.client.hc06.entity.Service;
+import org.korecky.bluetooth.client.hc06.entity.BluetoothDevice;
 import com.intel.bluetooth.RemoteDeviceHelper;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,7 +28,7 @@ import javax.obex.ResponseCodes;
  *
  * @author vkorecky
  */
-public class BluetoothDiscoverTask extends Task<List<BluetoothDevice>> {
+public class BluetoothScanThread extends Thread {
 
     private UUID[] uuidSet = new UUID[]{ServiceUUID.BASE_UUID_VALUE.getUUID()};
     private static Object lock = new Object();
@@ -33,7 +37,7 @@ public class BluetoothDiscoverTask extends Task<List<BluetoothDevice>> {
     private List<BluetoothDevice> foundDevices = new ArrayList<>();
     private BluetoothDevice tempDevice = null;
 
-    public BluetoothDiscoverTask() throws BluetoothStateException {
+    public BluetoothScanThread() throws BluetoothStateException {
 //        uuidSet = new UUID[ServiceUUID.values().length];
 //        int i = 0;
 //        for (ServiceUUID uuid : ServiceUUID.values()) {
@@ -44,14 +48,14 @@ public class BluetoothDiscoverTask extends Task<List<BluetoothDevice>> {
         agent = localDevice.getDiscoveryAgent();
     }
 
-    @Override
-    protected List<BluetoothDevice> call() throws Exception {
-        discoverDevices();
-        for (BluetoothDevice device : foundDevices) {
-            discoverServices(device);
-        }
-        return foundDevices;
-    }
+//    @Override
+//    protected List<BluetoothDevice> call() throws Exception {
+//        discoverDevices();
+//        for (BluetoothDevice device : foundDevices) {
+//            discoverServices(device);
+//        }
+//        return foundDevices;
+//    }
 
     public void discoverDevices() throws BluetoothStateException {
         foundDevices = new ArrayList<>();

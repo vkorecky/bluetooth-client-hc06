@@ -1,4 +1,4 @@
-package org.korecky.bluetooth.client.hc06;
+package org.korecky.bluetooth.client.hc06.entity;
 
 import java.util.ArrayList;
 import java.util.List;

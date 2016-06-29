@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.korecky.bluetooth.client.hc06;
+package org.korecky.bluetooth.client.hc06.enums;
 
 /**
  *
