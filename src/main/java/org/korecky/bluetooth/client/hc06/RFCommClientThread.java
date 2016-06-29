@@ -4,10 +4,18 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.EventObject;
+import java.util.List;
 import javax.bluetooth.LocalDevice;
 import javax.bluetooth.RemoteDevice;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
+import org.korecky.bluetooth.client.hc06.event.ErrorEvent;
+import org.korecky.bluetooth.client.hc06.event.MessageReceivedEvent;
+import org.korecky.bluetooth.client.hc06.listener.RFCommClientEventListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -15,10 +23,40 @@ import javax.microedition.io.StreamConnection;
  */
 public class RFCommClientThread extends Thread {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
+    protected List<RFCommClientEventListener> listenerList = new ArrayList<>();
+
     String clientURL;
 
     public RFCommClientThread(String clientURL) {
         this.clientURL = clientURL;
+    }
+
+    /**
+     * @param listener
+     */
+    public void addNetworkStatusChangedEventListener(RFCommClientEventListener listener) {
+        listenerList.add(listener);
+    }
+
+    /**
+     * @param listener
+     */
+    public void removeCommunicationDeviceSelectedEventListener(RFCommClientEventListener listener) {
+        listenerList.remove(listener);
+    }
+
+    /**
+     * @param evt
+     */
+    protected void fireBluetooothEvent(EventObject evt) {
+        for (RFCommClientEventListener listener : listenerList) {
+            if (evt instanceof ErrorEvent) {
+                listener.error((ErrorEvent) evt);
+            } else if (evt instanceof MessageReceivedEvent) {
+                listener.messageReceived((MessageReceivedEvent) evt);
+            }
+        }
     }
 
     public void run() {

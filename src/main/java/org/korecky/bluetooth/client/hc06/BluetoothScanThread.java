@@ -6,10 +6,9 @@ import org.korecky.bluetooth.client.hc06.entity.Service;
 import org.korecky.bluetooth.client.hc06.entity.BluetoothDevice;
 import com.intel.bluetooth.RemoteDeviceHelper;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.EventObject;
 import java.util.List;
-import javafx.concurrent.Task;
 import javax.bluetooth.BluetoothStateException;
 import javax.bluetooth.DataElement;
 import javax.bluetooth.DeviceClass;
@@ -19,16 +18,22 @@ import javax.bluetooth.LocalDevice;
 import javax.bluetooth.RemoteDevice;
 import javax.bluetooth.ServiceRecord;
 import javax.bluetooth.UUID;
-import javax.microedition.io.Connector;
-import javax.obex.HeaderSet;
-import javax.obex.Operation;
-import javax.obex.ResponseCodes;
+import org.korecky.bluetooth.client.hc06.event.DevicesScanFinishedEvent;
+import org.korecky.bluetooth.client.hc06.event.ErrorEvent;
+import org.korecky.bluetooth.client.hc06.event.ProgressUpdatedEvent;
+import org.korecky.bluetooth.client.hc06.event.ServicesScanFinishedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.korecky.bluetooth.client.hc06.listener.BluetoothScanEventListener;
 
 /**
  *
  * @author vkorecky
  */
 public class BluetoothScanThread extends Thread {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
+    protected List<BluetoothScanEventListener> listenerList = new ArrayList<>();
 
     private UUID[] uuidSet = new UUID[]{ServiceUUID.BASE_UUID_VALUE.getUUID()};
     private static Object lock = new Object();
@@ -56,6 +61,36 @@ public class BluetoothScanThread extends Thread {
 //        }
 //        return foundDevices;
 //    }
+    /**
+     * @param listener
+     */
+    public void addNetworkStatusChangedEventListener(BluetoothScanEventListener listener) {
+        listenerList.add(listener);
+    }
+
+    /**
+     * @param listener
+     */
+    public void removeCommunicationDeviceSelectedEventListener(BluetoothScanEventListener listener) {
+        listenerList.remove(listener);
+    }
+
+    /**
+     * @param evt
+     */
+    protected void fireBluetooothEvent(EventObject evt) {
+        for (BluetoothScanEventListener listener : listenerList) {
+            if (evt instanceof ErrorEvent) {
+                listener.error((ErrorEvent) evt);
+            } else if (evt instanceof ProgressUpdatedEvent) {
+                listener.progressUpdated((ProgressUpdatedEvent) evt);
+            } else if (evt instanceof DevicesScanFinishedEvent) {
+                listener.devicesScanFinished((DevicesScanFinishedEvent) evt);
+            } else if (evt instanceof ServicesScanFinishedEvent) {
+                listener.servicesScanFinished((ServicesScanFinishedEvent) evt);
+            }
+        }
+    }
 
     public void discoverDevices() throws BluetoothStateException {
         foundDevices = new ArrayList<>();
