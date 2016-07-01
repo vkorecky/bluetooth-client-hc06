@@ -131,12 +131,18 @@ public class BluetoothScanThread implements Runnable {
             @Override
             public void deviceDiscovered(RemoteDevice btDevice, DeviceClass arg1) {
                 try {
-                    RFCommBluetoothDevice device = new RFCommBluetoothDevice(btDevice.getFriendlyName(false), btDevice.getBluetoothAddress(), btDevice);
+                    String friendlyName = null;
+                    try {
+                        friendlyName = btDevice.getFriendlyName(false);
+                    } catch (Throwable ex) {
+                        LOGGER.warn("Cannot get firendly name of device.", ex);
+                    }
+                    RFCommBluetoothDevice device = new RFCommBluetoothDevice(friendlyName, btDevice.getBluetoothAddress(), btDevice);
                     foundDevices.add(device);
                     workDone++;
                     workMax = workMax + 2;
                     fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, String.format("Found bluetooth device: %s", device.getAddress()), this));
-                } catch (IOException ex) {
+                } catch (Throwable ex) {
                     LOGGER.error("Error when ask on device name.", ex);
                     fireBluetooothEvent(new ErrorEvent(ex, this));
                 }

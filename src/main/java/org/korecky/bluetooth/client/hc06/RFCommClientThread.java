@@ -1,14 +1,12 @@
 package org.korecky.bluetooth.client.hc06;
 
-import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
 import javax.bluetooth.LocalDevice;
-import javax.bluetooth.RemoteDevice;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 import org.korecky.bluetooth.client.hc06.event.ErrorEvent;
@@ -25,8 +23,8 @@ public class RFCommClientThread extends Thread {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
     protected List<RFCommClientEventListener> listenerList = new ArrayList<>();
-
-    String clientURL;
+    private StreamConnection con;
+    private String clientURL;
 
     public RFCommClientThread(String clientURL, RFCommClientEventListener listener) {
         listenerList.add(listener);
@@ -63,38 +61,58 @@ public class RFCommClientThread extends Thread {
     public void run() {
         try {
             LocalDevice local = LocalDevice.getLocalDevice();
-            System.out.println("Address:" + local.getBluetoothAddress() + "+n" + local.getFriendlyName());
-            while (true) {
-                StreamConnection con = (StreamConnection) Connector.open(clientURL);
-                OutputStream os = con.openOutputStream();
+            con = (StreamConnection) Connector.open(clientURL);
+            if (con != null) {
                 InputStream is = con.openInputStream();
-                InputStreamReader isr = new InputStreamReader(System.in);
-                BufferedReader bufReader = new BufferedReader(isr);
-                RemoteDevice dev = RemoteDevice.getRemoteDevice(con);
-
-                /**
-                 * if (dev !=null) { File f = new File("test.xml"); InputStream
-                 * sis = new FileInputStream("test.xml"); OutputStream oo = new
-                 * FileOutputStream(f); byte buf[] = new byte[1024]; int len;
-                 * while ((len=sis.read(buf))>0 oo.write(buf,0,len);
-                 * sis.close(); } *
-                 */
-                if (con != null) {
-                    while (true) {
-//                        //sender string
-//                        System.out.println("Serverd:" + dev.getBluetoothAddress() + "\r\n" + "Put your string" + "\r\n");
-//                        String str = bufReader.readLine();
-//                        os.write(str.getBytes());
-                        //reciever string
-                        byte buffer[] = new byte[1024];
-                        int bytes_read = is.read(buffer);
-                        String received = new String(buffer, 0, bytes_read);
-                        System.out.println(String.format("%s: %s", String.valueOf(dev.getBluetoothAddress()), received));
+                String messageBuffer = "";
+                while (true) {
+                    //reciever string
+                    byte buffer[] = new byte[1024];
+                    int bytes_read = is.read(buffer);
+                    String received = new String(buffer, 0, bytes_read);
+                    messageBuffer += received;
+                    if (messageBuffer.contains("\n")) {
+                        // Wait until message is complete
+                        String[] messages = messageBuffer.split("\\n");
+                        if (messages.length == 1) {
+                            fireBluetooothEvent(new MessageReceivedEvent(messages[0], this));
+                            messageBuffer = "";
+                        }
+                        if (messages.length > 1) {
+                            for (int i = 0; i < (messages.length - 1); i++) {
+                                fireBluetooothEvent(new MessageReceivedEvent(messages[i], this));
+                            }
+                            messageBuffer = messages[messages.length - 1];
+                        }
                     }
                 }
+            } else {
+                LOGGER.error("Cannot initialize connection.");
+                fireBluetooothEvent(new ErrorEvent(new IOException("Cannot initialize connections."), local));
             }
         } catch (Exception e) {
             System.err.print(e.toString());
+        }
+    }
+
+    public void send(String message) {
+        OutputStream os = null;
+        try {
+            //sender string
+            os = con.openOutputStream();
+            os.write(message.getBytes());
+        } catch (IOException ex) {
+            LOGGER.error("Cannot send message.", ex);
+            fireBluetooothEvent(new ErrorEvent(ex, this));
+        } finally {
+            try {
+                if (os != null) {
+                    os.close();
+                }
+            } catch (IOException ex) {
+                LOGGER.error("Cannot close output stream.", ex);
+                fireBluetooothEvent(new ErrorEvent(ex, this));
+            }
         }
     }
 }
