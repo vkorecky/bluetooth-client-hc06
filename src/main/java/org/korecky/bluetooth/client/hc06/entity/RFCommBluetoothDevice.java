@@ -8,17 +8,22 @@ import javax.bluetooth.RemoteDevice;
  *
  * @author vkorecky
  */
-public class BluetoothDevice {
+public class RFCommBluetoothDevice {
 
     String name;
     String address;
+    String url;
     RemoteDevice remoteDevice;
-    List<Service> services = new ArrayList<>(0);
 
-    public BluetoothDevice(String name, String address, RemoteDevice remoteDevice) {
+    public RFCommBluetoothDevice(String name, String address, RemoteDevice remoteDevice) {
         this.name = name;
         this.address = address;
         this.remoteDevice = remoteDevice;
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 
     public String getName() {
@@ -45,17 +50,12 @@ public class BluetoothDevice {
         this.remoteDevice = remoteDevice;
     }
 
-    @Override
-    public String toString() {
-        return name;
+    public String getUrl() {
+        return url;
     }
 
-    public List<Service> getServices() {
-        return services;
-    }
-
-    public void addService(Service service) {
-        this.services.add(service);
+    public void setUrl(String url) {
+        this.url = url;
     }
 
 }

@@ -8,22 +8,22 @@ import java.util.EventObject;
  */
 public class ProgressUpdatedEvent extends EventObject {
 
-    private final double workDone;
-    private final double workMax;
+    private final int workDone;
+    private final int workMax;
     private final String message;
 
-    public ProgressUpdatedEvent(double workDone, double workMax, String message, Object source) {
+    public ProgressUpdatedEvent(int workDone, int workMax, String message, Object source) {
         super(source);
         this.workDone = workDone;
         this.workMax = workMax;
         this.message = message;
     }
 
-    public double getWorkDone() {
+    public int getWorkDone() {
         return workDone;
     }
 
-    public double getWorkMax() {
+    public int getWorkMax() {
         return workMax;
     }
 

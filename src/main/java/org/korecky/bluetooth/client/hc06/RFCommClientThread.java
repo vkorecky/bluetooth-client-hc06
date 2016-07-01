@@ -28,7 +28,8 @@ public class RFCommClientThread extends Thread {
 
     String clientURL;
 
-    public RFCommClientThread(String clientURL) {
+    public RFCommClientThread(String clientURL, RFCommClientEventListener listener) {
+        listenerList.add(listener);
         this.clientURL = clientURL;
     }
 

@@ -1,10 +1,9 @@
 package org.korecky.bluetooth.client.hc06.listener;
 
 import java.util.EventListener;
-import org.korecky.bluetooth.client.hc06.event.DevicesScanFinishedEvent;
+import org.korecky.bluetooth.client.hc06.event.ScanFinishedEvent;
 import org.korecky.bluetooth.client.hc06.event.ErrorEvent;
 import org.korecky.bluetooth.client.hc06.event.ProgressUpdatedEvent;
-import org.korecky.bluetooth.client.hc06.event.ServicesScanFinishedEvent;
 
 /**
  *
@@ -22,17 +21,11 @@ public interface BluetoothScanEventListener extends EventListener {
      *
      * @param evt
      */
-    public void devicesScanFinished(DevicesScanFinishedEvent evt);
+    public void scanFinished(ScanFinishedEvent evt);
 
     /**
      *
      * @param evt
      */
     public void progressUpdated(ProgressUpdatedEvent evt);
-
-    /**
-     *
-     * @param evt
-     */
-    public void servicesScanFinished(ServicesScanFinishedEvent evt);
 }

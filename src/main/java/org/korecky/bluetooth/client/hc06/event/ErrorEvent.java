@@ -8,14 +8,14 @@ import java.util.EventObject;
  */
 public class ErrorEvent extends EventObject {
 
-    private final Exception error;
+    private final Throwable error;
 
-    public ErrorEvent(Exception error, Object source) {
+    public ErrorEvent(Throwable error, Object source) {
         super(source);
         this.error = error;
     }
 
-    public Exception getError() {
+    public Throwable getError() {
         return error;
     }
 }

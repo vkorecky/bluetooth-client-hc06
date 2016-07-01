@@ -1,16 +1,14 @@
 package org.korecky.bluetooth.client.hc06;
 
 import org.korecky.bluetooth.client.hc06.enums.ServiceUUID;
-import org.korecky.bluetooth.client.hc06.enums.ServiceAttribute;
-import org.korecky.bluetooth.client.hc06.entity.Service;
-import org.korecky.bluetooth.client.hc06.entity.BluetoothDevice;
+import org.korecky.bluetooth.client.hc06.entity.RFCommBluetoothDevice;
 import com.intel.bluetooth.RemoteDeviceHelper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
+import java.util.logging.Level;
 import javax.bluetooth.BluetoothStateException;
-import javax.bluetooth.DataElement;
 import javax.bluetooth.DeviceClass;
 import javax.bluetooth.DiscoveryAgent;
 import javax.bluetooth.DiscoveryListener;
@@ -18,10 +16,9 @@ import javax.bluetooth.LocalDevice;
 import javax.bluetooth.RemoteDevice;
 import javax.bluetooth.ServiceRecord;
 import javax.bluetooth.UUID;
-import org.korecky.bluetooth.client.hc06.event.DevicesScanFinishedEvent;
+import org.korecky.bluetooth.client.hc06.event.ScanFinishedEvent;
 import org.korecky.bluetooth.client.hc06.event.ErrorEvent;
 import org.korecky.bluetooth.client.hc06.event.ProgressUpdatedEvent;
-import org.korecky.bluetooth.client.hc06.event.ServicesScanFinishedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.korecky.bluetooth.client.hc06.listener.BluetoothScanEventListener;
@@ -30,37 +27,50 @@ import org.korecky.bluetooth.client.hc06.listener.BluetoothScanEventListener;
  *
  * @author vkorecky
  */
-public class BluetoothScanThread extends Thread {
+public class BluetoothScanThread implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
     protected List<BluetoothScanEventListener> listenerList = new ArrayList<>();
 
-    private UUID[] uuidSet = new UUID[]{ServiceUUID.BASE_UUID_VALUE.getUUID()};
+    private UUID[] uuidSet = new UUID[]{ServiceUUID.RFCOMM.getUUID()};
     private static Object lock = new Object();
     private LocalDevice localDevice;
     private DiscoveryAgent agent;
-    private List<BluetoothDevice> foundDevices = new ArrayList<>();
-    private BluetoothDevice tempDevice = null;
+    private List<RFCommBluetoothDevice> foundDevices = new ArrayList<>();
+    private RFCommBluetoothDevice tempDevice = null;
+    private int workDone = 0;
+    private int workMax = 2;
 
-    public BluetoothScanThread() throws BluetoothStateException {
-//        uuidSet = new UUID[ServiceUUID.values().length];
-//        int i = 0;
-//        for (ServiceUUID uuid : ServiceUUID.values()) {
-//            uuidSet[i] = uuid.getUUID();
-//            i++;
-//        }        
+    public BluetoothScanThread(BluetoothScanEventListener listener) throws BluetoothStateException {
+        listenerList.add(listener);
         localDevice = LocalDevice.getLocalDevice();
         agent = localDevice.getDiscoveryAgent();
     }
 
-//    @Override
-//    protected List<BluetoothDevice> call() throws Exception {
-//        discoverDevices();
-//        for (BluetoothDevice device : foundDevices) {
-//            discoverServices(device);
-//        }
-//        return foundDevices;
-//    }
+    @Override
+    public void run() {
+        try {
+            fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, "Starting search of devices", this));
+            List<RFCommBluetoothDevice> rfCommDices = new ArrayList<>();
+            discoverDevices();
+            fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, "Starting search of services", this));
+            for (RFCommBluetoothDevice device : foundDevices) {
+                discoverServices(device);
+                if (device.getUrl() != null) {
+                    rfCommDices.add(device);
+                }
+                workDone++;
+                fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, String.format("Services scanned: %s", device.getAddress()), this));
+            }
+            fireBluetooothEvent(new ProgressUpdatedEvent(workMax, workMax, "Search of RFComm bluetooth devices finished", this)
+            );
+            fireBluetooothEvent(new ScanFinishedEvent(rfCommDices, this));
+        } catch (Throwable ex) {
+            LOGGER.error("Error when try scann bluetooth devices.", ex);
+            fireBluetooothEvent(new ErrorEvent(ex, this));
+        }
+    }
+
     /**
      * @param listener
      */
@@ -84,10 +94,8 @@ public class BluetoothScanThread extends Thread {
                 listener.error((ErrorEvent) evt);
             } else if (evt instanceof ProgressUpdatedEvent) {
                 listener.progressUpdated((ProgressUpdatedEvent) evt);
-            } else if (evt instanceof DevicesScanFinishedEvent) {
-                listener.devicesScanFinished((DevicesScanFinishedEvent) evt);
-            } else if (evt instanceof ServicesScanFinishedEvent) {
-                listener.servicesScanFinished((ServicesScanFinishedEvent) evt);
+            } else if (evt instanceof ScanFinishedEvent) {
+                listener.scanFinished((ScanFinishedEvent) evt);
             }
         }
     }
@@ -100,22 +108,21 @@ public class BluetoothScanThread extends Thread {
                 lock.wait();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
-            return;
+            LOGGER.error("Error when discoverDevices().", e);
+            fireBluetooothEvent(new ErrorEvent(e, this));
         }
     }
 
-    public void discoverServices(BluetoothDevice device) throws BluetoothStateException {
+    public void discoverServices(RFCommBluetoothDevice device) throws BluetoothStateException {
         this.tempDevice = device;
-        tempDevice.getServices().clear();
         agent.searchServices(null, uuidSet, this.tempDevice.getRemoteDevice(), getDiscoveryListener());
         try {
             synchronized (lock) {
                 lock.wait();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
-            return;
+            LOGGER.error("Error when discoverServices().", e);
+            fireBluetooothEvent(new ErrorEvent(e, this));
         }
     }
 
@@ -123,15 +130,16 @@ public class BluetoothScanThread extends Thread {
         return new DiscoveryListener() {
             @Override
             public void deviceDiscovered(RemoteDevice btDevice, DeviceClass arg1) {
-                String name;
                 try {
-                    name = btDevice.getFriendlyName(false);
-                } catch (Exception e) {
-                    name = btDevice.getBluetoothAddress();
+                    RFCommBluetoothDevice device = new RFCommBluetoothDevice(btDevice.getFriendlyName(false), btDevice.getBluetoothAddress(), btDevice);
+                    foundDevices.add(device);
+                    workDone++;
+                    workMax = workMax + 2;
+                    fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, String.format("Found bluetooth device: %s", device.getAddress()), this));
+                } catch (IOException ex) {
+                    LOGGER.error("Error when ask on device name.", ex);
+                    fireBluetooothEvent(new ErrorEvent(ex, this));
                 }
-
-                foundDevices.add(new BluetoothDevice(name, btDevice.getBluetoothAddress(), btDevice));
-                System.out.println("device found: " + name);
             }
 
             @Override
@@ -146,27 +154,8 @@ public class BluetoothScanThread extends Thread {
                 if (tempDevice != null) {
                     for (int i = 0; i < servRecord.length; i++) {
                         String url = servRecord[i].getConnectionURL(ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
-                        if (url == null) {
-                            continue;
-                        }
-                        Service service = new Service();
-                        tempDevice.addService(service);
-                        service.setUrl(url);
-
-                        DataElement name = servRecord[i].getAttributeValue(ServiceAttribute.SERVICE_NAME.getId());
-                        if (name != null) {
-                            service.setName(String.valueOf(name.getValue()));
-                        }
-
-//                        DataElement protocolDescription = servRecord[i].getAttributeValue(ServiceAttribute.PROTOCOLDESCRIPTORLIST.getId());
-//                        if ((protocolDescription != null) && (protocolDescription.getValue() != null)) {
-//                            for (Object description : (Vector) protocolDescription.getValue()) {
-//                                service.getProtocolDescriptionList().add(String.valueOf(description));
-//                            }
-//                        }
-                        DataElement id = servRecord[i].getAttributeValue(ServiceAttribute.SERVICEID.getId());
-                        if (id != null) {
-                            service.setId(String.valueOf(id.getValue()));
+                        if ((url != null) && (url.toLowerCase().startsWith("btspp://"))) {
+                            tempDevice.setUrl(url);
                         }
                     }
                 }
