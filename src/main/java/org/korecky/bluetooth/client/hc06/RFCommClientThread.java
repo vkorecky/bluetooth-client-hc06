@@ -26,9 +26,17 @@ public class RFCommClientThread extends Thread {
     private StreamConnection con;
     private String clientURL;
 
-    public RFCommClientThread(String clientURL, RFCommClientEventListener listener) {
+    /**
+     * RFComm client thread
+     *
+     * @param clientURL URL of RFComm device
+     * @param listener Listener
+     * @throws IOException
+     */
+    public RFCommClientThread(String clientURL, RFCommClientEventListener listener) throws IOException {
         listenerList.add(listener);
         this.clientURL = clientURL;
+        con = (StreamConnection) Connector.open(clientURL);
     }
 
     /**
@@ -61,7 +69,6 @@ public class RFCommClientThread extends Thread {
     public void run() {
         try {
             LocalDevice local = LocalDevice.getLocalDevice();
-            con = (StreamConnection) Connector.open(clientURL);
             if (con != null) {
                 InputStream is = con.openInputStream();
                 String messageBuffer = "";
@@ -98,9 +105,12 @@ public class RFCommClientThread extends Thread {
     public void send(String message) {
         OutputStream os = null;
         try {
+            message += "\n";
             //sender string
-            os = con.openOutputStream();
-            os.write(message.getBytes());
+            if (con != null) {
+                os = con.openOutputStream();
+                os.write(message.getBytes());
+            }
         } catch (IOException ex) {
             LOGGER.error("Cannot send message.", ex);
             fireBluetooothEvent(new ErrorEvent(ex, this));

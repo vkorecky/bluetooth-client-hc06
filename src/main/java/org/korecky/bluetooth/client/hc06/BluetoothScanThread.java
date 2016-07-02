@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
-import java.util.logging.Level;
 import javax.bluetooth.BluetoothStateException;
 import javax.bluetooth.DeviceClass;
 import javax.bluetooth.DiscoveryAgent;
@@ -27,7 +26,7 @@ import org.korecky.bluetooth.client.hc06.listener.BluetoothScanEventListener;
  *
  * @author vkorecky
  */
-public class BluetoothScanThread implements Runnable {
+public class BluetoothScanThread extends Thread {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
     protected List<BluetoothScanEventListener> listenerList = new ArrayList<>();
@@ -39,9 +38,15 @@ public class BluetoothScanThread implements Runnable {
     private List<RFCommBluetoothDevice> foundDevices = new ArrayList<>();
     private RFCommBluetoothDevice tempDevice = null;
     private int workDone = 0;
-    private int workMax = 2;
+    private int workMax = 2;   
 
-    public BluetoothScanThread(BluetoothScanEventListener listener) throws BluetoothStateException {
+    /**
+     * Thread for scan bluetooth devices
+     *     
+     * @param listener Listener
+     * @throws BluetoothStateException
+     */
+    public BluetoothScanThread(BluetoothScanEventListener listener) throws BluetoothStateException {        
         listenerList.add(listener);
         localDevice = LocalDevice.getLocalDevice();
         agent = localDevice.getDiscoveryAgent();
