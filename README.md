@@ -6,7 +6,7 @@ Install libbluetooth-dev package
 
 On Ubuntu
 ``` bash
-sudo apt-get -s install libbluetooth-dev
+sudo apt-get install libbluetooth-dev
 ```
 
 ## Usage
