@@ -54,7 +54,7 @@ You can find demo project at link:
 
 #### Communication with HC06 bluetooth device
 ``` java
-	RFCommBluetoothDevice selectedDevice; // Fill this object by found HC06 from previous scan
+	RFCommBluetoothDevice selectedDevice; // Fill this object by bluetooth device which was found by BluetoothScanThread
     RFCommClientThread commThread = new RFCommClientThread(selectedDevice.getUrl(), '\n', new RFCommClientEventListener() {
         @Override
         public void error(ErrorEvent evt) {
