@@ -24,18 +24,19 @@ public class RFCommClientThread extends Thread {
     private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
     protected List<RFCommClientEventListener> listenerList = new ArrayList<>();
     private StreamConnection con;
-    private String clientURL;
+    private String terminationChar;
 
     /**
      * RFComm client thread
      *
      * @param clientURL URL of RFComm device
+     * @param terminationChar Termination char which indicates end of message
      * @param listener Listener
      * @throws IOException
      */
-    public RFCommClientThread(String clientURL, RFCommClientEventListener listener) throws IOException {
+    public RFCommClientThread(String clientURL, char terminationChar, RFCommClientEventListener listener) throws IOException {
+        this.terminationChar = String.valueOf(terminationChar);
         listenerList.add(listener);
-        this.clientURL = clientURL;
         con = (StreamConnection) Connector.open(clientURL);
     }
 
@@ -77,10 +78,10 @@ public class RFCommClientThread extends Thread {
                     byte buffer[] = new byte[1024];
                     int bytes_read = is.read(buffer);
                     String received = new String(buffer, 0, bytes_read);
-                    messageBuffer += received;
-                    if (messageBuffer.contains("\n")) {
-                        // Wait until message is complete
-                        String[] messages = messageBuffer.split("\\n");
+                    messageBuffer += received;                    
+                    if (messageBuffer.contains(terminationChar)) {
+                        // Wait until message is complete (wait on termination char)
+                        String[] messages = messageBuffer.split(String.format("\\%s", terminationChar));
                         if (messages.length == 1) {
                             fireBluetooothEvent(new MessageReceivedEvent(messages[0], this));
                             messageBuffer = "";
@@ -105,7 +106,7 @@ public class RFCommClientThread extends Thread {
     public void send(String message) {
         OutputStream os = null;
         try {
-            message += "\n";
+            message += terminationChar;
             //sender string
             if (con != null) {
                 os = con.openOutputStream();
