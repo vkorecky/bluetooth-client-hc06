@@ -25,6 +25,9 @@ You can find demo project at link:
 [https://github.com/vkorecky/bluetooth-client-hc06-example](https://github.com/vkorecky/bluetooth-client-hc06-example)
 
 ### Code example
+#### Pairing
+Library doesn't support pairing yet. You have to pair your bluetooth device (HC06) in your operating system first.
+
 #### Find HC06 bluetooth device
 ``` java
 	// Prepare search thread
