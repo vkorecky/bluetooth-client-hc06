@@ -12,18 +12,21 @@ import org.korecky.bluetooth.client.hc06.event.ProgressUpdatedEvent;
 public interface BluetoothScanEventListener extends EventListener {
 
     /**
+     * Error event
      *
      * @param evt
      */
     public void error(ErrorEvent evt);
 
     /**
+     * Scan finished
      *
      * @param evt
      */
     public void scanFinished(ScanFinishedEvent evt);
 
     /**
+     * Progress updated
      *
      * @param evt
      */

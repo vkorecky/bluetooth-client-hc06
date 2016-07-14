@@ -1,9 +1,5 @@
 package org.korecky.bluetooth.client.hc06;
 
-import org.korecky.bluetooth.client.hc06.enums.ServiceUUID;
-import org.korecky.bluetooth.client.hc06.entity.RFCommBluetoothDevice;
-import com.intel.bluetooth.RemoteDeviceHelper;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
@@ -15,12 +11,14 @@ import javax.bluetooth.LocalDevice;
 import javax.bluetooth.RemoteDevice;
 import javax.bluetooth.ServiceRecord;
 import javax.bluetooth.UUID;
-import org.korecky.bluetooth.client.hc06.event.ScanFinishedEvent;
+import org.korecky.bluetooth.client.hc06.entity.RFCommBluetoothDevice;
+import org.korecky.bluetooth.client.hc06.enums.ServiceUUID;
 import org.korecky.bluetooth.client.hc06.event.ErrorEvent;
 import org.korecky.bluetooth.client.hc06.event.ProgressUpdatedEvent;
+import org.korecky.bluetooth.client.hc06.event.ScanFinishedEvent;
+import org.korecky.bluetooth.client.hc06.listener.BluetoothScanEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.korecky.bluetooth.client.hc06.listener.BluetoothScanEventListener;
 
 /**
  *
@@ -29,29 +27,32 @@ import org.korecky.bluetooth.client.hc06.listener.BluetoothScanEventListener;
 public class BluetoothScanThread extends Thread {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
-    protected List<BluetoothScanEventListener> listenerList = new ArrayList<>();
+    private final List<BluetoothScanEventListener> listenerList = new ArrayList<>();
 
-    private UUID[] uuidSet = new UUID[]{ServiceUUID.RFCOMM.getUUID()};
-    private static Object lock = new Object();
-    private LocalDevice localDevice;
-    private DiscoveryAgent agent;
+    private final UUID[] uuidSet = new UUID[]{ServiceUUID.RFCOMM.getUUID()};
+    private static final Object LOCK = new Object();
+    private final LocalDevice localDevice;
+    private final DiscoveryAgent agent;
     private List<RFCommBluetoothDevice> foundDevices = new ArrayList<>();
     private RFCommBluetoothDevice tempDevice = null;
     private int workDone = 0;
-    private int workMax = 2;   
+    private int workMax = 2;
 
     /**
      * Thread for scan bluetooth devices
-     *     
+     *
      * @param listener Listener
-     * @throws BluetoothStateException
+     * @throws BluetoothStateException Exceptions
      */
-    public BluetoothScanThread(BluetoothScanEventListener listener) throws BluetoothStateException {        
+    public BluetoothScanThread(BluetoothScanEventListener listener) throws BluetoothStateException {
         listenerList.add(listener);
         localDevice = LocalDevice.getLocalDevice();
         agent = localDevice.getDiscoveryAgent();
     }
 
+    /**
+     * Run thread
+     */
     @Override
     public void run() {
         try {
@@ -76,24 +77,7 @@ public class BluetoothScanThread extends Thread {
         }
     }
 
-    /**
-     * @param listener
-     */
-    public void addNetworkStatusChangedEventListener(BluetoothScanEventListener listener) {
-        listenerList.add(listener);
-    }
-
-    /**
-     * @param listener
-     */
-    public void removeCommunicationDeviceSelectedEventListener(BluetoothScanEventListener listener) {
-        listenerList.remove(listener);
-    }
-
-    /**
-     * @param evt
-     */
-    protected void fireBluetooothEvent(EventObject evt) {
+    private void fireBluetooothEvent(EventObject evt) {
         for (BluetoothScanEventListener listener : listenerList) {
             if (evt instanceof ErrorEvent) {
                 listener.error((ErrorEvent) evt);
@@ -105,12 +89,12 @@ public class BluetoothScanThread extends Thread {
         }
     }
 
-    public void discoverDevices() throws BluetoothStateException {
+    private void discoverDevices() throws BluetoothStateException {
         foundDevices = new ArrayList<>();
         agent.startInquiry(DiscoveryAgent.GIAC, getDiscoveryListener());
         try {
-            synchronized (lock) {
-                lock.wait();
+            synchronized (LOCK) {
+                LOCK.wait();
             }
         } catch (InterruptedException e) {
             LOGGER.error("Error when discoverDevices().", e);
@@ -118,12 +102,12 @@ public class BluetoothScanThread extends Thread {
         }
     }
 
-    public void discoverServices(RFCommBluetoothDevice device) throws BluetoothStateException {
+    private void discoverServices(RFCommBluetoothDevice device) throws BluetoothStateException {
         this.tempDevice = device;
         agent.searchServices(null, uuidSet, this.tempDevice.getRemoteDevice(), getDiscoveryListener());
         try {
-            synchronized (lock) {
-                lock.wait();
+            synchronized (LOCK) {
+                LOCK.wait();
             }
         } catch (InterruptedException e) {
             LOGGER.error("Error when discoverServices().", e);
@@ -133,6 +117,12 @@ public class BluetoothScanThread extends Thread {
 
     private DiscoveryListener getDiscoveryListener() {
         return new DiscoveryListener() {
+            /**
+             * deviceDiscovered
+             *
+             * @param btDevice bluetooth device
+             * @param arg1 class
+             */
             @Override
             public void deviceDiscovered(RemoteDevice btDevice, DeviceClass arg1) {
                 try {
@@ -153,18 +143,29 @@ public class BluetoothScanThread extends Thread {
                 }
             }
 
+            /**
+             * inquiryCompleted
+             *
+             * @param arg0 int
+             */
             @Override
             public void inquiryCompleted(int arg0) {
-                synchronized (lock) {
-                    lock.notify();
+                synchronized (LOCK) {
+                    LOCK.notify();
                 }
             }
 
+            /**
+             * servicesDiscovered
+             *
+             * @param transID ID
+             * @param servRecord service record
+             */
             @Override
             public void servicesDiscovered(int transID, ServiceRecord[] servRecord) {
                 if (tempDevice != null) {
-                    for (int i = 0; i < servRecord.length; i++) {
-                        String url = servRecord[i].getConnectionURL(ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
+                    for (ServiceRecord servRecord1 : servRecord) {
+                        String url = servRecord1.getConnectionURL(ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
                         if ((url != null) && (url.toLowerCase().startsWith("btspp://"))) {
                             tempDevice.setUrl(url);
                         }
@@ -172,41 +173,18 @@ public class BluetoothScanThread extends Thread {
                 }
             }
 
+            /**
+             * serviceSearchCompleted
+             *
+             * @param i i
+             * @param i1 i1
+             */
             @Override
             public void serviceSearchCompleted(int i, int i1) {
-                synchronized (lock) {
-                    lock.notify();
+                synchronized (LOCK) {
+                    LOCK.notify();
                 }
             }
         };
-    }
-
-    public static boolean pairDevice(RemoteDevice remoteDevice, String PIN) {
-        boolean devicePaired = false;
-        //check if authenticated already
-        if (remoteDevice.isAuthenticated()) {
-            return true;
-        } else {
-
-            System.out.println("--> Pairing device");
-
-            try {
-                boolean paired = RemoteDeviceHelper.authenticate(remoteDevice, PIN);
-                //LOG.info("Pair with " + remoteDevice.getFriendlyName(true) + (paired ? " succesfull" : " failed"));
-                devicePaired = paired;
-                if (devicePaired) {
-                    System.out.println("--> Pairing successful with device " + remoteDevice.getBluetoothAddress());
-                } else {
-                    System.out.println("--> Pairing unsuccessful with device " + remoteDevice.getBluetoothAddress());
-                }
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-                System.out.println("--> Pairing unsuccessful with device " + remoteDevice.getBluetoothAddress());
-                devicePaired = false;
-            }
-            System.out.println("--> Pairing device Finish");
-            return devicePaired;
-        }
     }
 }

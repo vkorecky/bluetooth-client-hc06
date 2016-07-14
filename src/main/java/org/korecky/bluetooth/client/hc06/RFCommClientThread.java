@@ -22,9 +22,9 @@ import org.slf4j.LoggerFactory;
 public class RFCommClientThread extends Thread {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
-    protected List<RFCommClientEventListener> listenerList = new ArrayList<>();
-    private StreamConnection con;
-    private String terminationChar;
+    private final List<RFCommClientEventListener> listenerList = new ArrayList<>();
+    private final StreamConnection con;
+    private final String terminationChar;
 
     /**
      * RFComm client thread
@@ -32,7 +32,7 @@ public class RFCommClientThread extends Thread {
      * @param clientURL URL of RFComm device
      * @param terminationChar Termination char which indicates end of message
      * @param listener Listener
-     * @throws IOException
+     * @throws IOException Exceptions
      */
     public RFCommClientThread(String clientURL, char terminationChar, RFCommClientEventListener listener) throws IOException {
         this.terminationChar = String.valueOf(terminationChar);
@@ -40,24 +40,7 @@ public class RFCommClientThread extends Thread {
         con = (StreamConnection) Connector.open(clientURL);
     }
 
-    /**
-     * @param listener
-     */
-    public void addNetworkStatusChangedEventListener(RFCommClientEventListener listener) {
-        listenerList.add(listener);
-    }
-
-    /**
-     * @param listener
-     */
-    public void removeCommunicationDeviceSelectedEventListener(RFCommClientEventListener listener) {
-        listenerList.remove(listener);
-    }
-
-    /**
-     * @param evt
-     */
-    protected void fireBluetooothEvent(EventObject evt) {
+    private void fireBluetooothEvent(EventObject evt) {
         for (RFCommClientEventListener listener : listenerList) {
             if (evt instanceof ErrorEvent) {
                 listener.error((ErrorEvent) evt);
@@ -67,6 +50,10 @@ public class RFCommClientThread extends Thread {
         }
     }
 
+    /**
+     * Run thread
+     */
+    @Override
     public void run() {
         try {
             LocalDevice local = LocalDevice.getLocalDevice();
@@ -78,7 +65,7 @@ public class RFCommClientThread extends Thread {
                     byte buffer[] = new byte[1024];
                     int bytes_read = is.read(buffer);
                     String received = new String(buffer, 0, bytes_read);
-                    messageBuffer += received;                    
+                    messageBuffer += received;
                     if (messageBuffer.contains(terminationChar)) {
                         // Wait until message is complete (wait on termination char)
                         String[] messages = messageBuffer.split(String.format("\\%s", terminationChar));
@@ -103,6 +90,12 @@ public class RFCommClientThread extends Thread {
         }
     }
 
+    /**
+     * Sned message to bluetooth device
+     *
+     * @param message String message without termination character. The
+     * character is added automatically.
+     */
     public void send(String message) {
         OutputStream os = null;
         try {

@@ -11,12 +11,14 @@ import org.korecky.bluetooth.client.hc06.event.MessageReceivedEvent;
 public interface RFCommClientEventListener extends EventListener {
 
     /**
+     * Error event
      *
      * @param evt
      */
     public void error(ErrorEvent evt);
 
     /**
+     * Message received from bluetooth device
      *
      * @param evt
      */
