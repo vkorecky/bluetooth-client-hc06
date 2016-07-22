@@ -35,9 +35,15 @@
         <url>https://github.com/vkorecky/bluetooth-client-hc06</url>
         <connection>scm:git:git://github.com/vkorecky/bluetooth-client-hc06.git</connection>
         <developerConnection>scm:git:git@github.com:vkorecky/bluetooth-client-hc06.gitt</developerConnection>
-    </scm>
+    </scm>        
     
-    
+    <distributionManagement>        
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+        </repository>
+    </distributionManagement>
+ 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.7</maven.compiler.source>
@@ -103,7 +109,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>     
+            </plugin>      
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
@@ -117,33 +123,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>       
-            <!--            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jarsigner-plugin</artifactId>
-                <version>1.4</version>
-                <executions>
-                    <execution>
-                        <id>sign</id>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <keystore>${keystore.path}</keystore>
-                    <alias>${keystore.alias}</alias>
-                    <storepass>${keystore.password}</storepass>
-                    <keypass>${keystore.password}</keypass>
-                </configuration>
-            </plugin>-->
+            </plugin>
         </plugins>
     </build>
 </project>
