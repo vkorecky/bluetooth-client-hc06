@@ -8,20 +8,20 @@
     <url>https://github.com/vkorecky/bluetooth-client-hc06</url>
     <version>1.0</version>
     <packaging>jar</packaging>
-    
+
     <developers>
         <developer>
             <id>vkorecky</id>
-            <name>Vladislav Korecky</name>                       
-            <url>http://www.korecky.org</url>            
+            <name>Vladislav Korecky</name>
+            <url>http://www.korecky.org</url>
             <roles>
                 <role>architect</role>
                 <role>developer</role>
             </roles>
-            <timezone>Europe/Prague</timezone>                   
+            <timezone>Europe/Prague</timezone>
         </developer>
     </developers>
-    
+
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -30,20 +30,20 @@
             <comments>A business-friendly OSS license</comments>
         </license>
     </licenses>
-    
+
     <scm>
         <url>https://github.com/vkorecky/bluetooth-client-hc06</url>
         <connection>scm:git:git://github.com/vkorecky/bluetooth-client-hc06.git</connection>
         <developerConnection>scm:git:git@github.com:vkorecky/bluetooth-client-hc06.gitt</developerConnection>
-    </scm>        
-    
-    <distributionManagement>        
+    </scm>
+
+    <distributionManagement>
         <repository>
             <id>sonatype-nexus-staging</id>
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
         </repository>
     </distributionManagement>
- 
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.7</maven.compiler.source>
@@ -98,9 +98,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>2.10.4</version>
-                <configuration>
+                <!--<configuration>
                     <additionalparam>-Xdoclint:none</additionalparam>
-                </configuration>
+                </configuration>-->
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -109,7 +109,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>      
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
