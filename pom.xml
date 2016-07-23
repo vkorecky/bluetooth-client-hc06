@@ -6,7 +6,7 @@
     <name>bluetooth-client-hc06</name>
     <description>Java library: Bluetooth client for HC06 module which is widely used in projects with Arduino boards</description>
     <url>https://github.com/vkorecky/bluetooth-client-hc06</url>
-    <version>1.0</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <developers>

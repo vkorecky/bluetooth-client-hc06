@@ -33,19 +33,33 @@ public class BluetoothScanThread extends Thread {
     private static final Object LOCK = new Object();
     private final LocalDevice localDevice;
     private final DiscoveryAgent agent;
+    private boolean includeServices;
     private List<RFCommBluetoothDevice> foundDevices = new ArrayList<>();
     private RFCommBluetoothDevice tempDevice = null;
     private int workDone = 0;
     private int workMax = 2;
 
     /**
-     * Thread for scan bluetooth devices
+     * Thread for scan bluetooth devices include services
      *
      * @param listener Listener
      * @throws BluetoothStateException Exceptions
      */
     public BluetoothScanThread(BluetoothScanEventListener listener) throws BluetoothStateException {
+        this(listener, true);
+    }
+
+    /**
+     * Thread for scan bluetooth devices
+     *
+     * @param listener Listener
+     * @param includeServices If true than everything include services will be
+     * scan. If false only bluetooth devices will be discovered
+     * @throws BluetoothStateException Exceptions
+     */
+    public BluetoothScanThread(BluetoothScanEventListener listener, boolean includeServices) throws BluetoothStateException {
         listenerList.add(listener);
+        this.includeServices = includeServices;
         localDevice = LocalDevice.getLocalDevice();
         agent = localDevice.getDiscoveryAgent();
     }
@@ -56,19 +70,22 @@ public class BluetoothScanThread extends Thread {
     @Override
     public void run() {
         try {
-            fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, "Starting search of devices", this));
+            fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, "Starting scan", this));
             List<RFCommBluetoothDevice> rfCommDices = new ArrayList<>();
             discoverDevices();
-            fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, "Starting search of services", this));
-            for (RFCommBluetoothDevice device : foundDevices) {
-                discoverServices(device);
-                if (device.getUrl() != null) {
-                    rfCommDices.add(device);
+            if (includeServices) {
+                for (RFCommBluetoothDevice device : foundDevices) {
+                    workDone++;
+                    fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, String.format("Scanning services of %s/%s", device.getName(), device.getAddress()), this));
+                    discoverServices(device);
+                    if (device.getUrl() != null) {
+                        rfCommDices.add(device);
+                    }
                 }
-                workDone++;
-                fireBluetooothEvent(new ProgressUpdatedEvent(workDone, workMax, String.format("Services scanned: %s", device.getAddress()), this));
+            } else {
+                rfCommDices.addAll(foundDevices);
             }
-            fireBluetooothEvent(new ProgressUpdatedEvent(workMax, workMax, "Search of RFComm bluetooth devices finished", this)
+            fireBluetooothEvent(new ProgressUpdatedEvent(workMax, workMax, "Finished", this)
             );
             fireBluetooothEvent(new ScanFinishedEvent(rfCommDices, this));
         } catch (Throwable ex) {
