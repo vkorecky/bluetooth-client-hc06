@@ -25,6 +25,8 @@ public class RFCommClientThread extends Thread {
     private final List<RFCommClientEventListener> listenerList = new ArrayList<>();
     private final StreamConnection con;
     private final String terminationChar;
+    private boolean stop = false;
+    private final Object lockObj = new Object();
 
     /**
      * RFComm client thread
@@ -60,7 +62,7 @@ public class RFCommClientThread extends Thread {
             if (con != null) {
                 InputStream is = con.openInputStream();
                 String messageBuffer = "";
-                while (true) {
+                while (!stop) {
                     //reciever string
                     byte buffer[] = new byte[1024];
                     int bytes_read = is.read(buffer);
@@ -80,6 +82,13 @@ public class RFCommClientThread extends Thread {
                             messageBuffer = messages[messages.length - 1];
                         }
                     }
+                    synchronized (lockObj) {
+                        try {
+                            lockObj.wait(100);
+                        } catch (InterruptedException e) {
+                            LOGGER.error("Cannot sleep thread", e);
+                        }
+                    }
                 }
             } else {
                 LOGGER.error("Cannot initialize connection.");
@@ -88,6 +97,13 @@ public class RFCommClientThread extends Thread {
         } catch (Exception e) {
             System.err.print(e.toString());
         }
+    }
+
+    /**
+     * Terminate running thread
+     */
+    public void terminate() {
+        this.stop = true;
     }
 
     /**
@@ -117,6 +133,16 @@ public class RFCommClientThread extends Thread {
                 LOGGER.error("Cannot close output stream.", ex);
                 fireBluetooothEvent(new ErrorEvent(ex, this));
             }
+        }
+    }
+    
+    /**
+     * Wakeup thread
+     */
+    public void wakeup() {
+        synchronized (lockObj) {
+            LOGGER.trace(String.format("RFCommClientThread wakeup"));
+            lockObj.notify();            
         }
     }
 }
