@@ -24,7 +24,8 @@ public class RFCommClientThread extends Thread {
     private static final Logger LOGGER = LoggerFactory.getLogger(BluetoothScanThread.class);
     private final List<RFCommClientEventListener> listenerList = new ArrayList<>();
     private final StreamConnection con;
-    private final String terminationChar;
+    private final String sendMessageTerminationChar;
+    private final List<String> receivedMessageTerminationChars = new ArrayList<>();
     private boolean stop = false;
     private final Object lockObj = new Object();
 
@@ -32,14 +33,21 @@ public class RFCommClientThread extends Thread {
      * RFComm client thread
      *
      * @param clientURL URL of RFComm device
-     * @param terminationChar Termination char which indicates end of message
+     * @param sendMessageTerminationChar
+     * @param receivedMessageTerminationChars Termination chars which indicates
+     * end of message
      * @param listener Listener
      * @throws IOException Exceptions
      */
-    public RFCommClientThread(String clientURL, char terminationChar, RFCommClientEventListener listener) throws IOException {
-        this.terminationChar = String.valueOf(terminationChar);
+    public RFCommClientThread(String clientURL, char sendMessageTerminationChar, char[] receivedMessageTerminationChars, RFCommClientEventListener listener) throws IOException {
         listenerList.add(listener);
         con = (StreamConnection) Connector.open(clientURL);
+        this.sendMessageTerminationChar = String.valueOf(sendMessageTerminationChar);
+        if ((receivedMessageTerminationChars != null) && (receivedMessageTerminationChars.length > 0)) {
+            for (char receivedMessageTerminationChar : receivedMessageTerminationChars) {
+                this.receivedMessageTerminationChars.add(String.valueOf(receivedMessageTerminationChar));
+            }
+        }
     }
 
     private void fireBluetooothEvent(EventObject evt) {
@@ -68,18 +76,21 @@ public class RFCommClientThread extends Thread {
                     int bytes_read = is.read(buffer);
                     String received = new String(buffer, 0, bytes_read);
                     messageBuffer += received;
-                    if (messageBuffer.contains(terminationChar)) {
-                        // Wait until message is complete (wait on termination char)
-                        String[] messages = messageBuffer.split(String.format("\\%s", terminationChar));
-                        if (messages.length == 1) {
-                            fireBluetooothEvent(new MessageReceivedEvent(messages[0], this));
-                            messageBuffer = "";
-                        }
-                        if (messages.length > 1) {
-                            for (int i = 0; i < (messages.length - 1); i++) {
-                                fireBluetooothEvent(new MessageReceivedEvent(messages[i], this));
+                    for (String terminationChar : receivedMessageTerminationChars) {
+                        if (messageBuffer.contains(terminationChar)) {
+                            // Wait until message is complete (wait on termination char)
+                            String[] messages = messageBuffer.split(String.format("\\%s", terminationChar));
+                            if (messages.length == 1) {
+                                fireBluetooothEvent(new MessageReceivedEvent(messages[0], this));
+                                messageBuffer = "";
                             }
-                            messageBuffer = messages[messages.length - 1];
+                            if (messages.length > 1) {
+                                for (int i = 0; i < (messages.length - 1); i++) {
+                                    fireBluetooothEvent(new MessageReceivedEvent(messages[i], this));
+                                }
+                                messageBuffer = messages[messages.length - 1];
+                            }
+                            break;
                         }
                     }
                     synchronized (lockObj) {
@@ -115,7 +126,7 @@ public class RFCommClientThread extends Thread {
     public void send(String message) {
         OutputStream os = null;
         try {
-            message += terminationChar;
+            message += sendMessageTerminationChar;
             //sender string
             if (con != null) {
                 os = con.openOutputStream();
@@ -135,14 +146,14 @@ public class RFCommClientThread extends Thread {
             }
         }
     }
-    
+
     /**
      * Wakeup thread
      */
     public void wakeup() {
         synchronized (lockObj) {
             LOGGER.trace(String.format("RFCommClientThread wakeup"));
-            lockObj.notify();            
+            lockObj.notify();
         }
     }
 }
